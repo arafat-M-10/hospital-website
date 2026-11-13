@@ -1,0 +1,16 @@
+/* views */
+function view(){[...$('#nav').children].forEach((b,i)=>b.classList.toggle('on',i==tab));const t=NAV[role][tab];let h=`<h2>${t}</h2>`;
+const apRow=(a,act)=>[pt(a.p)?.name,doc(a.d).name,a.date+' '+a.time,tag(a.st),act?(a.st=='BOOKED'?act(a):''):''];
+if(t=='ওভারভিউ')h+=`<div class="stats">${stat(D.pts.length,'মোট রোগী')}${stat(D.docs.length,'ডাক্তার')}${stat(D.apts.filter(a=>a.st=='BOOKED').length,'বুক করা অ্যাপয়েন্টমেন্ট')}${stat(money(income()),'আদায়')}${stat(money(due()),'বকেয়া')}</div>`+tbl(['রোগী','ডাক্তার','সময়','অবস্থা',''],D.apts.slice(-5).map(a=>apRow(a)));
+else if(t=='ডাক্তার')h+=tbl(['নাম','বিভাগ','রুম','ভিজিট ফি'],D.docs.map(d=>[d.name,d.bn+' ('+d.spec+')',d.room,money(d.fee)]));
+else if(t=='রোগী')h+=(role=='admin'||role=='staff'?`<div class="row"><input id="np" placeholder="রোগীর নাম"><input id="na" type="number" placeholder="বয়স"><button onclick="addPt($('#np').value,$('#na').value)">যোগ করুন</button></div>`:'')+tbl(['আইডি','নাম','বয়স'],D.pts.map(p=>[p.id,p.name,p.age]));
+else if(t=='অ্যাপয়েন্টমেন্ট'){h+=`<div class="row"><select id="bp">${D.pts.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select><select id="bd">${D.docs.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select><button onclick="book(+$('#bp').value,+$('#bd').value)">বুক করুন</button></div>`;
+h+=tbl(['রোগী','ডাক্তার','সময়','অবস্থা',''],D.apts.map(a=>apRow(a,a=>`<button class="r s" onclick="cancel(${a.id})">বাতিল</button>`)))}
+else if(t=='ওয়ার্ড')h+=tbl(['ওয়ার্ড','মোট বেড','খালি','দৈনিক চার্জ'],D.wards.map(w=>[w.n,w.beds,w.beds-w.occ,money(w.fee)]));
+else if(t=='ফার্মেসি')h+=tbl(['ওষুধ','স্টক','দাম'],D.meds.map(m=>[m.n,m.q+(m.q<10?' <span class="tag c">কম</span>':''),money(m.pr)]));
+else if(t=='আয়')h+=`<div class="stats">${stat(money(income()),'মোট আদায়')}${stat(money(due()),'বকেয়া')}</div>`+tbl(['রোগী','বিষয়','বিল','পরিশোধ'],D.bills.map(b=>[pt(b.p).name,b.item,money(b.amt),money(b.paid)]));
+else if(t=='আমার প্রোফাইল'){const d=doc(me.did),m=myStats();h+=`<div class="card" style="margin-bottom:14px"><b style="font-size:20px">${d.name}</b><br>${d.bn} · রুম ${d.room} · ভিজিট ফি ${money(d.fee)}</div><div class="stats">${stat(m.n,'মোট রোগী')}${stat(m.done,'ভিজিট সম্পন্ন')}${stat(money(m.earn),'ভিজিট থেকে আয়')}${stat(m.wait,'অপেক্ষমাণ সিরিয়াল')}</div>`}
+else if(t=='আমার রোগী')h+=tbl(['রোগী','সময়','অবস্থা',''],D.apts.filter(a=>a.d==me.did).map(a=>[pt(a.p).name,a.date+' '+a.time,tag(a.st),a.st=='BOOKED'?`<button class="s" onclick="done(${a.id})">ভিজিট শেষ</button>`:'']));
+else if(t=='আমার অ্যাপয়েন্টমেন্ট')h+=me.guest?'<p>গেস্ট মোডে অ্যাপয়েন্টমেন্ট এখানে জমা হয়। এআইকে বলে বুক করুন।</p>'+tbl(['ডাক্তার','সময়','অবস্থা'],D.apts.filter(a=>a.p==me.pid).map(a=>[doc(a.d).name,a.date+' '+a.time,tag(a.st)])):tbl(['ডাক্তার','সময়','অবস্থা',''],D.apts.filter(a=>a.p==me.pid).map(a=>[doc(a.d).name,a.date+' '+a.time,tag(a.st),a.st=='BOOKED'?`<button class="r s" onclick="cancel(${a.id})">বাতিল</button>`:'']));
+$('#main').innerHTML=h}
+function myStats(){const m=D.apts.filter(a=>a.d==me.did),done=m.filter(a=>a.st=='COMPLETED').length;return{n:new Set(m.filter(a=>a.st!='CANCELLED').map(a=>a.p)).size,done,earn:done*doc(me.did).fee,wait:m.filter(a=>a.st=='BOOKED').length}}

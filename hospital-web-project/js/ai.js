@@ -1,0 +1,20 @@
+/* AI */
+const can={income:['admin'],addPt:['admin','staff'],book:['admin','staff','patient'],cancel:['admin','staff','patient'],meds:['admin','staff','doctor','patient'],mine:['doctor']};
+const deny='এই কাজটি আপনার লগইন দিয়ে করা যাবে না।';
+function findDoc(t){const k=[[1,['cardio','হৃদ','heart','বুক']],[2,['gyne','গাইনি','প্রসূতি','মহিলা']],[3,['medicine','মেডিসিন','জ্বর','fever']],[4,['pedia','child','শিশু','বাচ্চা']]];
+return D.docs.find(d=>t.includes(d.name.toLowerCase().split(' ')[1]))||doc((k.find(x=>x[1].some(w=>t.includes(w)))||[])[0])}
+function findPt(t){return D.pts.find(p=>t.includes(p.name.toLowerCase()))}
+async function brain(raw){const t=raw.toLowerCase(),has=(...k)=>k.some(x=>t.includes(x));
+if(pend){const p=pend;const d=findDoc(t),pp=findPt(t);if(p.type=='book'){if(!p.d&&d)p.d=d;if(!p.p&&pp)p.p=pp;if(p.d&&p.p){pend=null;return doBook(p.p,p.d,t)}return p.d?'কোন রোগীর জন্য? রোগীর নাম বলুন।':'কোন ডাক্তারের কাছে? নাম বা বিভাগ বলুন।'}}
+if(has('cancel','বাতিল')){if(!can.cancel.includes(role))return deny;const a=D.apts.filter(a=>a.st=='BOOKED'&&(role=='patient'?a.p==me.pid:true)).filter(a=>{const pp=findPt(t),d=findDoc(t);return (!pp||a.p==pp.id)&&(!d||a.d==d.id)}).pop();if(!a)return'বাতিল করার মতো বুক করা অ্যাপয়েন্টমেন্ট পাইনি।';await cancel(a.id);return`${pt(a.p).name} এর ${doc(a.d).name} এর অ্যাপয়েন্টমেন্ট (${a.date} ${a.time}) বাতিল করেছি।`}
+if(has('appoint','apoint','এপয়েন্ট','অ্যাপয়েন্ট','appointment','serial','সিরিয়াল','বুক','book')&&!(role=='doctor')){if(!can.book.includes(role))return deny;const d=findDoc(t);let p=role=='patient'?pt(me.pid):findPt(t);
+if(d&&p)return doBook(p,d,t);pend={type:'book',d,p};return d?'কোন রোগীর জন্য? রোগীর নাম বলুন।':'কোন ডাক্তারের কাছে? নাম বা বিভাগ (যেমন হৃদরোগ, শিশু) বলুন।'}
+if(has('আয়','income','ইনকাম','বকেয়া','revenue','আদায়')&&role!='doctor'){if(!can.income.includes(role))return'আয়ের তথ্য শুধু অ্যাডমিন দেখতে পারবেন।';return`এখন পর্যন্ত আদায় ${money(income())}, বকেয়া ${money(due())}।`}
+if(role=='doctor'&&has('রোগী','patient','আয়','ভিজিট','income','সিরিয়াল','আজ','earn')){const m=myStats();if(has('আয়','ভিজিট','income','earn'))return`আপনি ${m.done}টি ভিজিট শেষ করেছেন, আয় ${money(m.earn)}।`;return`আপনার মোট ${m.n} জন রোগী, এখনো ${m.wait}টি সিরিয়াল বাকি।`}
+if(has('নতুন রোগী','রোগী যোগ','add patient','patient add')){if(!can.addPt.includes(role))return deny;const m=raw.match(/(?:add patient|patient add|নতুন রোগী|রোগী যোগ)\s*([A-Za-z\u0980-\u09FF]+)(?:.*?(\d+))?/i);if(!m)return'রোগীর নাম ও বয়স বলুন, যেমন: নতুন রোগী Hasan বয়স 30।';const p=await addPt(m[1],m[2]);return`রোগী ${p.name} (বয়স ${p.age}) যোগ করেছি, আইডি ${p.id}।`}
+if(has('বেড','bed','ward','ওয়ার্ড','icu','cabin','কেবিন')){const w=D.wards.filter(w=>!has('icu','cabin','কেবিন','general')||t.includes(w.n.toLowerCase().split(' ')[0])||(has('কেবিন')&&w.n=='Cabin'));return w.map(w=>`${w.n}: ${w.beds-w.occ}টি খালি (মোট ${w.beds}), দৈনিক ${money(w.fee)}`).join('\n')}
+if(has('ওষুধ','medicine','stock','স্টক','napa','seclo','ace','histacin','ফার্মেসি')){if(!can.meds.includes(role))return deny;const m=D.meds.find(m=>t.includes(m.n.toLowerCase()));if(m)return`${m.n}: স্টকে ${m.q}টি, দাম ${money(m.pr)}।`;if(has('কম','low')){const l=D.meds.filter(m=>m.q<10);return l.length?'কম স্টক: '+l.map(m=>`${m.n} (${m.q})`).join(', '):'সব ওষুধের স্টক ঠিক আছে।'}return D.meds.map(m=>`${m.n}: ${m.q}টি`).join('\n')}
+if(has('ডাক্তার','doctor','dr','বিভাগ','department')){const d=D.docs.filter(x=>findDoc(t)?x.id==findDoc(t).id:true);return d.map(x=>`${x.name}, ${x.bn}, রুম ${x.room}, ফি ${money(x.fee)}`).join('\n')}
+return'আমি ডাক্তার, অ্যাপয়েন্টমেন্ট, বেড, ওষুধ'+(role=='admin'?', আয়, রোগী যোগ করা':'')+' নিয়ে সাহায্য করতে পারি। যেমন: "'+CHIPS[role][0]+'" বলে দেখুন।'}
+async function doBook(p,d,t){const dt=has2(t,['আজ','today'])?day(0):has2(t,['পরশু'])?day(2):day(1);const a=await book(p.id,d.id,dt);view();return a?`${p.name} এর জন্য ${d.name} এর (${d.bn}) অ্যাপয়েন্টমেন্ট বুক হয়েছে: ${a.date}, ${a.time}, রুম ${d.room}। ভিজিট ফি ${money(d.fee)}।`:'ঐ দিনে ডাক্তারের সব সিরিয়াল পূর্ণ।'}
+const has2=(t,k)=>k.some(x=>t.includes(x));
